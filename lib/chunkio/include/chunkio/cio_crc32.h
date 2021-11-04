@@ -20,10 +20,12 @@
 #ifndef CIO_CRC32_H
 #define CIO_CRC32_H
 
-#include <crc32/crc32.h>
+#include <crc32c/include/crc32c/crc32c.h>
 
-#define cio_crc32_init()            crc_init()
-#define cio_crc32_update(a, b, c)   crc_update(a, b, c)
-#define cio_crc32_finalize(a)       crc_finalize(a)
+typedef uint32_t crc_t;
+
+/* crc32c handles the first and last xor with 0xffffffff */
+#define cio_crc32_init() 0
+#define cio_crc32_update(a, b, c) crc32c_extend(a, b, c)
 
 #endif

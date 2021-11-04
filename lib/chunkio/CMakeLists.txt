@@ -107,7 +107,7 @@ include_directories(
   deps/monkey/include
   )
 
-add_subdirectory(deps/crc32)
+add_subdirectory(deps/crc32c)
 add_subdirectory(src)
 add_subdirectory(tools)
 

@@ -45,8 +45,8 @@ char cio_file_init_bytes[] =   {
     /* file type (2 bytes)    */
     CIO_FILE_ID_00, CIO_FILE_ID_01,
 
-    /* crc32 (4 bytes) in network byte order */
-    0xff, 0x12, 0xd9, 0x41,
+    /* crc32c (4 bytes) in network byte order */
+    0xd2, 0x77, 0x61, 0xf1,
 
     /* padding bytes (we have 16 extra bytes) */
     0x00, 0x00, 0x00, 0x00, 0x00,
@@ -74,17 +74,18 @@ static size_t content_len(struct cio_file *cf)
 /* Calculate content checksum in a variable */
 void cio_file_calculate_checksum(struct cio_file *cf, crc_t *out)
 {
-    crc_t val;
-    size_t len;
     unsigned char *in_data;
 
-    len = content_len(cf);
     in_data = (unsigned char *) cf->map + CIO_FILE_CONTENT_OFFSET;
-    val = cio_crc32_update(cf->crc_cur, in_data, len);
-    *out = val;
+    *out = cio_crc32_update(cf->crc_cur, in_data, content_len(cf));;
 }
 
-/* Update crc32 checksum into the memory map */
+static crc_t* get_crc32_map(struct cio_file* cf)
+{
+    return (crc_t*)(cf->map + 2);
+}
+
+/* Update crc32c checksum into the memory map */
 static void update_checksum(struct cio_file *cf,
                             unsigned char *data, size_t len)
 {
@@ -99,18 +100,14 @@ static void update_checksum(struct cio_file *cf,
     }
 
     crc = cio_crc32_update(cf->crc_cur, data, len);
-    memcpy(cf->map + 2, &crc, sizeof(crc));
+    *get_crc32_map(cf) = htonl(crc);
     cf->crc_cur = crc;
 }
 
-/* Finalize CRC32 context and update the memory map */
+/* Finalize CRC32C context and update the memory map */
 static void finalize_checksum(struct cio_file *cf)
 {
-    crc_t crc;
-
-    crc = cio_crc32_finalize(cf->crc_cur);
-    crc = htonl(crc);
-    memcpy(cf->map + 2, &crc, sizeof(crc));
+    *get_crc32_map(cf) = htonl(cf->crc_cur);
 }
 
 /*
@@ -140,12 +137,9 @@ static void write_init_header(struct cio_chunk *ch, struct cio_file *cf)
 {
     memcpy(cf->map, cio_file_init_bytes, sizeof(cio_file_init_bytes));
 
-    /* If no checksum is enabled, reset the initial crc32 bytes */
+    /* If no checksum is enabled, reset the initial crc32c bytes */
     if (!(ch->ctx->flags & CIO_CHECKSUM)) {
-        cf->map[2] = 0;
-        cf->map[3] = 0;
-        cf->map[4] = 0;
-        cf->map[5] = 0;
+        *get_crc32_map(cf) = 0;
     }
 }
 
@@ -198,7 +192,7 @@ static int cio_file_format_check(struct cio_chunk *ch,
         /* Initialize init bytes */
         write_init_header(ch, cf);
 
-        /* Write checksum in context (note: crc32 not finalized) */
+        /* Write checksum in context */
         if (ch->ctx->flags & CIO_CHECKSUM) {
             cio_file_calculate_checksum(cf, &cf->crc_cur);
         }
@@ -224,9 +218,8 @@ static int cio_file_format_check(struct cio_chunk *ch,
             cio_file_calculate_checksum(cf, &crc);
 
             /* Compare */
-            crc_check = cio_crc32_finalize(crc);
-            crc_check = htonl(crc_check);
-            if (memcmp(p, &crc_check, sizeof(crc_check)) != 0) {
+            crc_check = htonl(crc);
+            if (*get_crc32_map(cf) != crc_check) {
                 cio_log_debug(ch->ctx, "[cio file] invalid crc32 at %s/%s",
                               ch->name, cf->path);
                 cio_error_set(ch, CIO_ERR_BAD_CHECKSUM);
@@ -1141,7 +1134,7 @@ char *cio_file_hash(struct cio_file *cf)
 
 void cio_file_hash_print(struct cio_file *cf)
 {
-    printf("crc cur=%ld\n", cf->crc_cur);
+    printf("crc cur=%d\n", cf->crc_cur);
     printf("%08lx\n", (long unsigned int ) cf->crc_cur);
 }
 
@@ -1192,7 +1185,7 @@ void cio_file_scan_dump(struct cio_ctx *ctx, struct cio_stream *st)
              * finalize the checksum and compare it value using the
              * host byte order.
              */
-            crc = cio_crc32_finalize(crc);
+            crc = htonl(crc);
             if (crc != crc_fs) {
                 printf("checksum error=%08x expected=%08x, ",
                        (uint32_t) crc_fs, (uint32_t) crc);

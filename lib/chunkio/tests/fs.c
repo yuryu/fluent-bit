@@ -177,21 +177,21 @@ static void test_fs_checksum()
     struct cio_chunk *chunk;
 
     /*
-     * crc32 checksums
+     * crc32c checksums
      * ===============
      */
 
     /* Empty file */
-    char crc32_test1[] =  {
-        0xff, 0x12, 0xd9, 0x41, 0x00,
+    char crc32c_test1[] =  {
+        0xd2, 0x77, 0x61, 0xf1, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00
     };
 
-    /* CRC32 of 2 zero bytes + content of data/400kb.txt file */
-    char crc32_test2[] = {
-        0x67, 0xfa, 0x3c, 0x10, 0x00,
+    /* CRC32C of 2 zero bytes + content of data/400kb.txt file */
+    char crc32c_test2[] = {
+        0x26, 0x6e, 0xb6, 0xbf, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00
@@ -223,12 +223,12 @@ static void test_fs_checksum()
      * Test 1:
      *  - create one empty file
      *  - sync
-     *  - validate crc32_test1
+     *  - validate crc32c_test1
      */
     chunk = cio_chunk_open(ctx, stream, "test1.out", CIO_OPEN, 10, &err);
     TEST_CHECK(chunk != NULL);
 
-    /* Check default crc32() for an empty file after sync */
+    /* Check default crc32c() for an empty file after sync */
     f_hash = cio_chunk_hash(chunk);
     TEST_CHECK(f_hash != NULL);
     cio_chunk_sync(chunk);
@@ -236,15 +236,15 @@ static void test_fs_checksum()
     memcpy(&val, f_hash, sizeof(val));
     val = ntohl(val);
 
-    ret = memcmp(&val, crc32_test1, 4);
+    ret = memcmp(&val, crc32c_test1, 4);
     TEST_CHECK(ret == 0);
 
     /*
      * Test 2:
      *  - append content of 400kb.txt file to file context
-     *  - validate file crc32 in mem is the same as crc_test1
+     *  - validate file crc32c in mem is the same as crc_test1
      *  - sync
-     *  - validate file crc32 in mem is equal to sha_test2
+     *  - validate file crc32c in mem is equal to sha_test2
      *
      * note that the second sha1 calculation is done using the initial
      * sha1 context so it skip old data to perform the verification.
@@ -256,7 +256,7 @@ static void test_fs_checksum()
     memcpy(&val, f_hash, sizeof(val));
     val = ntohl(val);
 
-    ret = memcmp(&val, crc32_test2, 4);
+    ret = memcmp(&val, crc32c_test2, 4);
     TEST_CHECK(ret == 0);
 
     /* Release */
@@ -284,21 +284,21 @@ static void test_fs_up_down()
     struct cio_chunk *chunk;
 
     /*
-     * crc32 checksums
+     * crc32c checksums
      * ===============
      */
 
     /* Empty file */
-    char crc32_test1[] =  {
-        0xff, 0x12, 0xd9, 0x41, 0x00,
+    char crc32c_test1[] =  {
+        0xd2, 0x77, 0x61, 0xf1, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00
     };
 
-    /* CRC32 of 2 zero bytes + content of data/400kb.txt file */
-    char crc32_test2[] = {
-        0x67, 0xfa, 0x3c, 0x10, 0x00,
+    /* CRC32C of 2 zero bytes + content of data/400kb.txt file */
+    char crc32c_test2[] = {
+        0x26, 0x6e, 0xb6, 0xbf, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00
@@ -330,7 +330,7 @@ static void test_fs_up_down()
      * Test 1:
      *  - create one empty file
      *  - sync
-     *  - validate crc32_test1
+     *  - validate crc32c_test1
      */
     chunk = cio_chunk_open(ctx, stream, "test1.out", CIO_OPEN, 10, &err);
     TEST_CHECK(chunk != NULL);
@@ -345,7 +345,7 @@ static void test_fs_up_down()
     TEST_CHECK(ret == 0);
     TEST_CHECK(cio_chunk_is_up(chunk) == CIO_TRUE);
 
-    /* Check default crc32() for an empty file after sync */
+    /* Check default crc32c() for an empty file after sync */
     f_hash = cio_chunk_hash(chunk);
     TEST_CHECK(f_hash != NULL);
     cio_chunk_sync(chunk);
@@ -353,15 +353,15 @@ static void test_fs_up_down()
     memcpy(&val, f_hash, sizeof(val));
     val = ntohl(val);
 
-    ret = memcmp(&val, crc32_test1, 4);
+    ret = memcmp(&val, crc32c_test1, 4);
     TEST_CHECK(ret == 0);
 
     /*
      * Test 2:
      *  - append content of 400kb.txt file to file context
-     *  - validate file crc32 in mem is the same as crc_test1
+     *  - validate file crc32c in mem is the same as crc_test1
      *  - sync
-     *  - validate file crc32 in mem is equal to sha_test2
+     *  - validate file crc32c in mem is equal to sha_test2
      *
      * note that the second sha1 calculation is done using the initial
      * sha1 context so it skip old data to perform the verification.
@@ -393,7 +393,7 @@ static void test_fs_up_down()
     memcpy(&val, f_hash, sizeof(val));
     val = ntohl(val);
 
-    ret = memcmp(&val, crc32_test2, 4);
+    ret = memcmp(&val, crc32c_test2, 4);
     TEST_CHECK(ret == 0);
 
     /* Release */
